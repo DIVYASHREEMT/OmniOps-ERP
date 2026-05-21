@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniOps-ERP</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="topbar">
+        <h1>OmniOps-ERP</h1>
+        <button id="offline-toggle" class="btn-online">ONLINE</button>
+    </nav>
+    <div class="dashboard">
+        <h2>Mini ERP Dashboard</h2>
+        <p>Loading data...</p>
+    </div>
+    <script>
+        if ("serviceWorker" in navigator) {
+
+            navigator.serviceWorker.register("/static/sw.js")
+                .then(() => console.log("Service Worker Registered"))
+                .catch(err => console.log("SW registration failed", err));
+        }
+    </script>
+    <script type="module" src="/static/js/db.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

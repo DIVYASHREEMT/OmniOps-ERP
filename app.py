@@ -1,95 +1,105 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from db import get_db_connection
 app = Flask(__name__)
+@app.route('/')
+def home():
+    return render_template('index.html')
 @app.route('/health', methods=['GET'])
 def health_check():
-    #Simple endpoint to check backend is running and db is connected
     conn = get_db_connection()
     if conn:
         conn.close()
-        return jsonify({"status": "healthy", "database": "connected"}), 200
-    else:
-        return jsonify({"status": "unhealthy", "database": "disconnected"}), 500
+        return jsonify({
+            "status": "healthy",
+            "database": "connected"
+        }), 200
+    return jsonify({
+        "status": "unhealthy",
+        "database": "disconnected"
+    }), 500
 @app.route('/sync/push', methods=['POST'])
 def sync_push():
-    data = request.json
-    changes = data.get('changes', [])
-
-    if not changes:
-        return jsonify({"status": "success", "message": "No changes"}), 200
-
+    data = request.json or {}
+    changes = data.get("changes", [])
+    if len(changes) == 0:
+        return jsonify({
+            "status": "success",
+            "message": "No changes"
+        }), 200
     conn = get_db_connection()
     if not conn:
-        return jsonify({"status": "error", "message": "DB connection failed"}), 500
-
+        return jsonify({
+            "status": "error",
+            "message": "DB connection failed"
+        }), 500
     cursor = conn.cursor()
-
     try:
         for change in changes:
             action = change.get("action")
             table = change.get("entity_type")
             payload = change.get("payload")
-
-            valid_tables = ["products", "customers", "sales", "sale_items"]
-            if table not in valid_tables:
+            allowed_tables = ["products", "customers", "sales", "sale_items"]
+            if table not in allowed_tables:
                 continue
-
             if action in ["CREATE", "UPDATE"]:
                 columns = ", ".join(payload.keys())
                 placeholders = ", ".join(["%s"] * len(payload))
-
-                updates = ", ".join([f"{key}=VALUES({key})" for key in payload.keys()])
-                sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) ON DUPLICATE KEY UPDATE {updates}"
+                updates = ", ".join(
+                    [f"{k}=VALUES({k})" for k in payload.keys()]
+                )
+                sql = f"""
+                    INSERT INTO {table} ({columns})
+                    VALUES ({placeholders})
+                    ON DUPLICATE KEY UPDATE {updates}
+                """
                 cursor.execute(sql, list(payload.values()))
-
             elif action == "DELETE":
-                cursor.execute(f"UPDATE {table} SET is_deleted=TRUE WHERE id=%s", (payload["id"],))
-
+                cursor.execute(
+                    f"UPDATE {table} SET is_deleted = TRUE WHERE id = %s",
+                    (payload["id"],)
+                )
         conn.commit()
-
-        return jsonify({"status": "success", "processed": len(changes)}), 200
-
+        return jsonify({
+            "status": "success",
+            "processed": len(changes)
+        }), 200
     except Exception as e:
         conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
     finally:
         cursor.close()
         conn.close()
 @app.route('/sync/pull', methods=['GET'])
 def sync_pull():
     last_sync = request.args.get("since", "1970-01-01 00:00:00")
-
     conn = get_db_connection()
     if not conn:
         return jsonify({"status": "error"}), 500
-
     cursor = conn.cursor(dictionary=True)
-
     tables = ["products", "customers", "sales", "sale_items"]
     result = {}
-
     try:
         for table in tables:
             cursor.execute(
                 f"SELECT * FROM {table} WHERE updated_at > %s",
                 (last_sync,)
             )
-            rows = cursor.fetchall()
-            result[table] = rows
-
+            result[table] = cursor.fetchall()
         cursor.execute("SELECT CURRENT_TIMESTAMP as ts")
         server_time = cursor.fetchone()["ts"].strftime("%Y-%m-%d %H:%M:%S")
-
         return jsonify({
             "status": "success",
             "data": result,
             "timestamp": server_time
         }), 200
-
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
     finally:
         cursor.close()
         conn.close()
