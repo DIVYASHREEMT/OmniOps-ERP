@@ -7,7 +7,7 @@ This project was built as a learning + placement-focused system to understand re
 
 ---
 
-## 🚀 Features
+## Features
 
 - **Offline-first system** – works even without internet using IndexedDB  
 - **Sync system (Outbox pattern)** – pushes local changes to server when online  
@@ -21,7 +21,7 @@ This project was built as a learning + placement-focused system to understand re
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Backend**: Python, Flask  
 - **Database**: MySQL  
@@ -30,7 +30,7 @@ This project was built as a learning + placement-focused system to understand re
 
 ---
 
-## 📦 Requirements
+## Requirements
 
 - Python 3.8+
 - MySQL installed and running
