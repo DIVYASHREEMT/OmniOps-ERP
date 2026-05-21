@@ -39,10 +39,19 @@ function generateUUID() {
 }
 async function addToOutbox(type, action, payload) {
     const db = await initDB();
+    let cleanPayload = JSON.parse(JSON.stringify(payload));
+    if (cleanPayload.total_amount !== undefined) {
+        cleanPayload.total_value = cleanPayload.total_amount;
+        delete cleanPayload.total_amount;
+    }
+    if (cleanPayload.qty !== undefined) {
+        cleanPayload.quantity = cleanPayload.qty;
+        delete cleanPayload.qty;
+    }
     await db.add("outbox", {
         entity_type: type,
         action: action,
-        payload: payload,
+        payload: cleanPayload,
         timestamp: new Date().toISOString()
     });
 }
@@ -51,8 +60,8 @@ async function saveLocalRecord(store, action, record) {
     if (!record.id) {
         record.id = generateUUID();
     }
-    record.updated_at =
-        new Date().toISOString().slice(0, 19).replace("T", " ");
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    record.updated_at = now;
     if (action === "DELETE") {
         record.is_deleted = true;
     }

@@ -21,24 +21,27 @@ def health_check():
 def sync_push():
     data = request.json or {}
     changes = data.get("changes", [])
-    if len(changes) == 0:
-        return jsonify({
-            "status": "success",
-            "message": "No changes"
-        }), 200
+    if not changes:
+        return jsonify({"status": "success", "message": "No changes"}), 200
     conn = get_db_connection()
     if not conn:
-        return jsonify({
-            "status": "error",
-            "message": "DB connection failed"
-        }), 500
+        return jsonify({"status": "error", "message": "DB connection failed"}), 500
     cursor = conn.cursor()
+    allowed_tables = ["products", "customers", "sales", "sale_items"]
     try:
+        def sort_key(x):
+            order = {
+                "customers": 0,
+                "products": 1,
+                "sales": 2,
+                "sale_items": 3
+            }
+            return order.get(x.get("entity_type"), 99)
+        changes.sort(key=sort_key)
         for change in changes:
             action = change.get("action")
             table = change.get("entity_type")
             payload = change.get("payload")
-            allowed_tables = ["products", "customers", "sales", "sale_items"]
             if table not in allowed_tables:
                 continue
             if action in ["CREATE", "UPDATE"]:
@@ -65,6 +68,7 @@ def sync_push():
         }), 200
     except Exception as e:
         conn.rollback()
+        print("SYNC PUSH ERROR:", str(e))
         return jsonify({
             "status": "error",
             "message": str(e)
