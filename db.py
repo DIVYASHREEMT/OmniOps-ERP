@@ -1,18 +1,17 @@
-import mysql.connector
 import os
+import mysql.connector
 from mysql.connector import Error
-from dotenv import load_dotenv
-load_dotenv()
+
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
-            host=os.getenv('DB_HOST'),
-            database=os.getenv('DB_NAME'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD')
+            host=os.getenv("MYSQLHOST"),
+            database=os.getenv("MYSQLDATABASE"),
+            user=os.getenv("MYSQLUSER"),
+            password=os.getenv("MYSQLPASSWORD"),
+            port=os.getenv("MYSQLPORT")
         )
-        if connection.is_connected():
-            return connection
+        return connection
     except Error as e:
         print(f"Error while connecting to MySQL: {e}")
         return None
